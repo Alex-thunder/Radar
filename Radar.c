@@ -1,5 +1,7 @@
 #include <wiringPi.h>
+#include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #include <sys/time.h>
 
 #define pwmPin    	1
@@ -56,20 +58,28 @@ int main(void)
 	pwmSetClock(192);	// delta = 10us
 	pwmSetRange(2000); 	// f = 50HZ; T = 20ms
 
+	FILE * temp = fopen("data.temp", "w");
+	FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");	
+	fprintf(gnuplotPipe, "%s \n", "set xr [-200:200]");
+	fprintf(gnuplotPipe, "%s \n", "set yr [0:200]");
+	fprintf(gnuplotPipe, "%s \n", "set polar ");
+	fprintf(gnuplotPipe, "%s \n", "plot 200");
+	
+	delay(2000);
+	
 	while(1){
 		for (i = 0; i <200;i++)
 		{
 			pwmWrite(pwmPin,50 + i);
 			dis = disMeasure();
+			printf("%d \n",i);
 			printf("%0.2f cm\n\n",dis);
-			delay(100);		
-		}
-		for (i = 199; i > 0;i--)
-		{
-			pwmWrite(pwmPin, 50 + i);
-			dis = disMeasure();
-			printf("%0.2f cm\n\n",dis);
-			delay(100);			
+			if (dis < 200)
+			{
+				fprintf(temp, "%lf %lf \n", dis*(cos(i*10*3.14/200)), dis*(sin(i*10*3.14/200))); //Write the data to a temporary file
+				fprintf(gnuplotPipe, "%s \n", "plot 'data.temp'");
+			}
+			delay(100);
 		}
 	}
 	return 0;
